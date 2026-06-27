@@ -26,11 +26,19 @@ const SECTION_DEFS = [
   { id: "hidden",       title: "Hidden Gems",           emoji: "💎" },
 ];
 
-const CITY_PRESETS: Record<string, { lat: number; lng: number; label: string }> = {
-  delhi:   { lat: 28.6139, lng: 77.2090, label: "Delhi" },
-  gurgaon: { lat: 28.4595, lng: 77.0266, label: "Gurgaon" },
-  noida:   { lat: 28.5355, lng: 77.3910, label: "Noida" },
-};
+async function geocodePincode(pin: string): Promise<{ lat: number; lng: number; label: string } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(pin)}&country=India&format=json&limit=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    if (!data.length) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name?.split(",")[0] ?? pin };
+  } catch {
+    return null;
+  }
+}
 
 function CafeRow({ cafes, loading, onLoadMore, hasMore }: {
   cafes: Cafe[]; loading: boolean; onLoadMore?: () => void; hasMore?: boolean;
@@ -91,25 +99,40 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
 
 function LocationBar({
   status,
-  selectedCity,
-  onSelectCity,
+  pinnedLabel,
+  onPincode,
   onRetry,
 }: {
   status: "idle" | "detecting" | "granted" | "denied";
-  selectedCity: string | null;
-  onSelectCity: (city: string) => void;
+  pinnedLabel: string | null;
+  onPincode: (lat: number, lng: number, label: string) => void;
   onRetry: () => void;
 }) {
-  const [expanded, setExpanded] = useState(status === "denied");
+  const [expanded, setExpanded] = useState(false);
+  const [pin, setPin] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [error, setError] = useState("");
 
-  // Auto-expand when denied so user sees picker immediately
   useEffect(() => {
-    if (status === "denied") setExpanded(true);
-  }, [status]);
+    if (status === "denied" && !pinnedLabel) setExpanded(true);
+  }, [status, pinnedLabel]);
+
+  const submit = async () => {
+    const clean = pin.trim().replace(/\D/g, "");
+    if (clean.length < 6) { setError("Enter a 6-digit pincode"); return; }
+    setError("");
+    setResolving(true);
+    const result = await geocodePincode(clean);
+    setResolving(false);
+    if (!result) { setError("Pincode not found — try another"); return; }
+    onPincode(result.lat, result.lng, clean);
+    setExpanded(false);
+    setPin("");
+  };
 
   if (status === "detecting") {
     return (
-      <div className="mx-5 mb-5 px-4 py-3 rounded-2xl flex items-center gap-3"
+      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl flex items-center gap-3"
         style={{ background: "var(--cream-deep)" }}>
         <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--copper)" }} />
         <p className="text-xs" style={{ color: "var(--charcoal-3)" }}>Detecting your location…</p>
@@ -117,35 +140,23 @@ function LocationBar({
     );
   }
 
-  if (status === "granted") {
-    return (
-      <div className="mx-5 mb-5 px-4 py-3 rounded-2xl flex items-center gap-2"
-        style={{ background: "var(--cream-deep)" }}>
-        <span className="text-sm">📍</span>
-        <p className="flex-1 text-xs font-medium" style={{ color: "var(--charcoal-2)" }}>Using your GPS location</p>
-        <button onClick={() => setExpanded((v) => !v)}
-          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-          style={{ background: "var(--espresso)", color: "#FAF6F1" }}>
-          {expanded ? "Close" : "Change city"}
-        </button>
-      </div>
-    );
-  }
+  const headerLabel = status === "granted"
+    ? (pinnedLabel ? `Pincode ${pinnedLabel}` : "Using GPS")
+    : (pinnedLabel ? `Pincode ${pinnedLabel}` : "Set your location");
 
-  // denied or idle
   return (
-    <div className="mx-5 mb-5 rounded-2xl overflow-hidden" style={{ background: "var(--cream-deep)" }}>
+    <div className="mx-5 mb-4 rounded-2xl overflow-hidden" style={{ background: "var(--cream-deep)" }}>
       {/* Header row */}
       <div className="px-4 py-3 flex items-center gap-2">
         <span className="text-sm">📍</span>
-        <p className="flex-1 text-xs font-medium" style={{ color: "var(--charcoal-2)" }}>
-          {selectedCity ? `Showing cafés in ${CITY_PRESETS[selectedCity].label}` : "Location access off"}
-        </p>
-        <button onClick={onRetry}
-          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-          style={{ background: "rgba(44,24,16,0.08)", color: "var(--espresso)" }}>
-          Use GPS
-        </button>
+        <p className="flex-1 text-xs font-medium" style={{ color: "var(--charcoal-2)" }}>{headerLabel}</p>
+        {status !== "granted" && (
+          <button onClick={onRetry}
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: "rgba(44,24,16,0.08)", color: "var(--espresso)" }}>
+            Use GPS
+          </button>
+        )}
         <button onClick={() => setExpanded((v) => !v)}
           className="w-7 h-7 flex items-center justify-center rounded-full"
           style={{ background: "rgba(44,24,16,0.08)" }}>
@@ -156,7 +167,7 @@ function LocationBar({
         </button>
       </div>
 
-      {/* City buttons — shown when expanded */}
+      {/* Pincode input — shown when expanded */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -165,19 +176,39 @@ function LocationBar({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             style={{ overflow: "hidden" }}>
-            <div className="px-4 pb-4 flex gap-2">
-              {Object.entries(CITY_PRESETS).map(([key, val]) => (
-                <button key={key}
-                  onClick={() => { onSelectCity(key); setExpanded(false); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            <div className="px-4 pb-4">
+              <p className="text-[11px] mb-2" style={{ color: "var(--charcoal-3)" }}>
+                Enter your area pincode to find cafés nearby
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={pin}
+                  onChange={(e) => { setPin(e.target.value); setError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+                  placeholder="e.g. 110001"
+                  maxLength={6}
+                  className="flex-1 px-3 py-2.5 rounded-xl text-sm"
                   style={{
-                    background: selectedCity === key ? "var(--espresso)" : "#fff",
-                    color: selectedCity === key ? "#FAF6F1" : "var(--charcoal)",
-                    border: "1.5px solid var(--stone)",
-                  }}>
-                  {val.label}
+                    background: "#fff",
+                    border: error ? "1.5px solid rgba(176,96,96,0.6)" : "1.5px solid var(--stone)",
+                    color: "var(--charcoal)",
+                    fontFamily: "var(--font-geist)",
+                  }}
+                />
+                <button
+                  onClick={submit}
+                  disabled={resolving}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ background: "var(--espresso)", color: "#FAF6F1", opacity: resolving ? 0.6 : 1 }}>
+                  {resolving ? "…" : "Go"}
                 </button>
-              ))}
+              </div>
+              {error && (
+                <p className="text-[11px] mt-1.5" style={{ color: "rgba(176,96,96,0.9)" }}>{error}</p>
+              )}
             </div>
           </motion.div>
         )}
@@ -191,7 +222,7 @@ export default function DiscoverPage() {
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "detecting" | "granted" | "denied">("idle");
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [pinnedLabel, setPinnedLabel] = useState<string | null>(null);
 
   const [featured, setFeatured]           = useState<Cafe[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
@@ -229,12 +260,9 @@ export default function DiscoverPage() {
     });
   }, []);
 
-  const pickCity = useCallback((city: string) => {
-    const preset = CITY_PRESETS[city];
-    if (preset) {
-      setSelectedCity(city);
-      setLocation({ lat: preset.lat, lng: preset.lng });
-    }
+  const handlePincode = useCallback((lat: number, lng: number, label: string) => {
+    setPinnedLabel(label);
+    setLocation({ lat, lng });
   }, []);
 
   // Curated / featured
@@ -373,8 +401,8 @@ export default function DiscoverPage() {
       {!showSearch && (
         <LocationBar
           status={locationStatus}
-          selectedCity={selectedCity}
-          onSelectCity={pickCity}
+          pinnedLabel={pinnedLabel}
+          onPincode={handlePincode}
           onRetry={retryLocation}
         />
       )}

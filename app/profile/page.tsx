@@ -27,7 +27,6 @@ const SETTINGS = [
   {
     title: "Preferences",
     items: [
-      { icon: "🔔", label: "Notifications", value: "On" },
       { icon: "📍", label: "Location", value: "While using" },
       { icon: "🌍", label: "City", value: "Delhi NCR" },
     ],
