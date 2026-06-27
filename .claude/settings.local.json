@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/Users/siakashyap/Desktop/untitled folder/app/onboarding\" \\\\ *)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s http://localhost:3000)",
+      "mcp__Claude_Preview__preview_start",
+      "Skill(anthropic-skills:setup-cowork)",
+      "Skill(anthropic-skills:setup-cowork:*)"
+    ]
+  }
+}
