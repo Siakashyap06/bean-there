@@ -8,6 +8,8 @@
   --font-fraunces:   'Fraunces', Georgia, serif;
   --font-instrument: 'Instrument Serif', Georgia, serif;
   --font-geist:      var(--font-geist-sans, system-ui, -apple-system, sans-serif);
+  /* Alias: legacy references to Playfair now resolve to Fraunces */
+  --font-playfair:   var(--font-fraunces);
 
   /* Palette — warm editorial */
   --cream:        #FAF6F1;

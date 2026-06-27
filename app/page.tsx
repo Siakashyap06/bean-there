@@ -73,7 +73,7 @@ export default function SplashPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
           className="text-lg"
-          style={{ color: "var(--copper-lt)", fontFamily: "var(--font-playfair)", fontStyle: "italic" }}
+          style={{ color: "var(--copper-lt)", fontFamily: "var(--font-instrument)", fontStyle: "italic" }}
         >
           Find your perfect cup.
         </motion.p>
