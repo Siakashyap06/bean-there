@@ -1,21 +1,16 @@
 "use client";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useBeanStore } from "@/lib/store";
 import BottomNav from "@/components/layout/BottomNav";
 import Link from "next/link";
 
 const TASTE_EMOJIS: Record<string, string> = {
-  // roast
   light: "☀️", medium: "☕", dark: "🌑",
-  // drink
   latte: "🥛", cappuccino: "☕", espresso: "⚡", "cold-brew": "🧊", "pour-over": "🫗", matcha: "🍵",
-  // milk
   dairy: "🐄", oat: "🌾", almond: "🌰", soy: "🫘", none: "✦",
-  // sweetness
   low: "🤍", sweet: "🍯",
-  // vibe
   study: "📚", work: "💻", social: "💬", date: "🌹", quick: "⚡",
 };
 
@@ -38,14 +33,6 @@ const SETTINGS = [
     ],
   },
   {
-    title: "Account",
-    items: [
-      { icon: "👤", label: "Edit Profile" },
-      { icon: "🔗", label: "Share Profile" },
-      { icon: "📤", label: "Export Passport" },
-    ],
-  },
-  {
     title: "About",
     items: [
       { icon: "ℹ️", label: "Version", value: "2.0.0" },
@@ -55,24 +42,53 @@ const SETTINGS = [
   },
 ];
 
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
 export default function ProfilePage() {
   const router = useRouter();
-  const { coffeeDNA: tasteProfile, stamps, memories, collections, wantToTryIds, reset } = useBeanStore();
+  const {
+    coffeeDNA: tasteProfile, stamps, memories, collections,
+    wantToTryIds, reset, userProfile, setUserProfile,
+  } = useBeanStore();
+
   const [confirmReset, setConfirmReset] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draftName, setDraftName] = useState(userProfile?.name ?? "");
+  const [draftEmail, setDraftEmail] = useState(userProfile?.email ?? "");
+
+  const openEdit = () => {
+    setDraftName(userProfile?.name ?? "");
+    setDraftEmail(userProfile?.email ?? "");
+    setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    setUserProfile({ name: draftName.trim(), email: draftEmail.trim() });
+    setEditOpen(false);
+  };
+
+  const initials = userProfile?.name ? getInitials(userProfile.name) : null;
 
   return (
     <div className="min-h-screen pb-nav" style={{ background: "var(--cream)" }}>
 
       {/* Header */}
-      <div className="pt-14 px-5 pb-5 flex items-center justify-between">
+      <div className="pt-14 px-5 pb-2 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold"
-          style={{ color: "var(--charcoal)", fontFamily: "var(--font-playfair)" }}>
+          style={{ color: "var(--charcoal)", fontFamily: "var(--font-fraunces)" }}>
           Profile
         </h1>
         {tasteProfile && (
           <Link href="/card">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
+            <motion.button whileTap={{ scale: 0.95 }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold"
               style={{ backgroundColor: "var(--espresso)", color: "#FAF6F1" }}>
               ☕ My Coffee Card
@@ -80,6 +96,145 @@ export default function ProfilePage() {
           </Link>
         )}
       </div>
+
+      {/* User identity card */}
+      <div className="px-5 mb-5">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl p-5 flex items-center gap-4"
+          style={{ backgroundColor: "#fff", boxShadow: "var(--shadow-sm)" }}>
+
+          {/* Avatar */}
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-lg font-bold"
+            style={{
+              background: initials
+                ? "linear-gradient(135deg, var(--espresso) 0%, var(--espresso-md) 100%)"
+                : "var(--cream-deep)",
+              color: initials ? "#FAF6F1" : "var(--stone-dark)",
+              fontFamily: "var(--font-fraunces)",
+            }}>
+            {initials ?? "☕"}
+          </div>
+
+          {/* Name / email */}
+          <div className="flex-1 min-w-0">
+            {userProfile?.name ? (
+              <>
+                <p className="font-semibold text-base leading-tight truncate"
+                  style={{ color: "var(--charcoal)", fontFamily: "var(--font-fraunces)" }}>
+                  {userProfile.name}
+                </p>
+                {userProfile.email ? (
+                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--charcoal-3)" }}>
+                    {userProfile.email}
+                  </p>
+                ) : (
+                  <button onClick={openEdit} className="text-xs mt-0.5" style={{ color: "var(--copper)" }}>
+                    + Add email
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-sm" style={{ color: "var(--charcoal-2)" }}>No name set</p>
+                <button onClick={openEdit} className="text-xs mt-0.5" style={{ color: "var(--copper)" }}>
+                  + Add your name &amp; email
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Edit pencil */}
+          <button onClick={openEdit}
+            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: "var(--cream-deep)" }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                stroke="var(--charcoal-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                stroke="var(--charcoal-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </motion.div>
+      </div>
+
+      {/* Edit Profile bottom sheet */}
+      <AnimatePresence>
+        {editOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end"
+            style={{ backgroundColor: "rgba(26,14,9,0.5)", backdropFilter: "blur(4px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setEditOpen(false); }}>
+
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              className="w-full rounded-t-3xl p-6"
+              style={{ backgroundColor: "var(--cream)", maxWidth: 430, margin: "0 auto" }}>
+
+              <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{ backgroundColor: "var(--stone-dark)" }} />
+
+              <h2 className="font-display text-2xl font-bold mb-6"
+                style={{ color: "var(--charcoal)", fontFamily: "var(--font-fraunces)" }}>
+                Edit Profile
+              </h2>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                  style={{ color: "var(--charcoal-3)" }}>Name</label>
+                <input
+                  type="text"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  placeholder="Your name"
+                  className="w-full px-4 py-3.5 rounded-2xl text-base"
+                  style={{
+                    backgroundColor: "#fff",
+                    border: "1.5px solid var(--stone)",
+                    color: "var(--charcoal)",
+                  }}
+                />
+              </div>
+
+              <div className="mb-8">
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                  style={{ color: "var(--charcoal-3)" }}>Email</label>
+                <input
+                  type="email"
+                  value={draftEmail}
+                  onChange={(e) => setDraftEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3.5 rounded-2xl text-base"
+                  style={{
+                    backgroundColor: "#fff",
+                    border: "1.5px solid var(--stone)",
+                    color: "var(--charcoal)",
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setEditOpen(false)}
+                  className="flex-1 py-4 rounded-2xl text-sm font-semibold"
+                  style={{ backgroundColor: "var(--cream-deep)", color: "var(--charcoal-2)" }}>
+                  Cancel
+                </button>
+                <button onClick={saveEdit}
+                  className="flex-1 py-4 rounded-2xl text-sm font-semibold"
+                  style={{ backgroundColor: "var(--espresso)", color: "#FAF6F1" }}>
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Taste Profile card */}
       <div className="px-5 mb-5">
@@ -93,21 +248,15 @@ export default function ProfilePage() {
             <div className="relative p-6">
               <p className="text-[10px] tracking-[0.22em] uppercase mb-2"
                 style={{ color: "rgba(250,246,241,0.35)" }}>Your Taste Profile</p>
-
-              <div className="text-3xl mb-3">
-                {TASTE_EMOJIS[tasteProfile.drink] ?? "☕"}
-              </div>
-
+              <div className="text-3xl mb-3">{TASTE_EMOJIS[tasteProfile.drink] ?? "☕"}</div>
               <h2 className="font-display text-2xl font-bold mb-1 leading-tight"
-                style={{ color: "#FAF6F1", fontFamily: "var(--font-playfair)" }}>
+                style={{ color: "#FAF6F1", fontFamily: "var(--font-fraunces)" }}>
                 {TASTE_LABELS[tasteProfile.drink]}{" "}
                 {tasteProfile.roast === "light" ? "Lover" : tasteProfile.roast === "dark" ? "Devotee" : "Fan"}
               </h2>
-              <p className="text-xs italic" style={{ color: "var(--copper-lt)", fontFamily: "var(--font-playfair)" }}>
+              <p className="text-xs italic" style={{ color: "var(--copper-lt)", fontFamily: "var(--font-instrument)" }}>
                 {TASTE_LABELS[tasteProfile.roast]} · {TASTE_LABELS[tasteProfile.vibe]}
               </p>
-
-              {/* Mini tags */}
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {[tasteProfile.milk, tasteProfile.sweetness].map((key) => (
                   <span key={key} className="text-[11px] px-2.5 py-1 rounded-full font-medium"
@@ -168,7 +317,7 @@ export default function ProfilePage() {
       {/* Collections */}
       <div className="px-5 mb-5">
         <h3 className="font-display text-lg font-semibold mb-3"
-          style={{ color: "var(--charcoal)", fontFamily: "var(--font-playfair)" }}>
+          style={{ color: "var(--charcoal)", fontFamily: "var(--font-fraunces)" }}>
           Collections
         </h3>
         <div className="flex flex-col gap-2">

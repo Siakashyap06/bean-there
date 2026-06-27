@@ -3,6 +3,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CoffeeDNA, Cafe, PassportStamp, CoffeeMemory, FavoriteCollection } from "./types";
 
+interface UserProfile {
+  name: string;
+  email: string;
+}
+
 interface BeanThereStore {
   hasCompletedOnboarding: boolean;
   coffeeDNA: CoffeeDNA | null;
@@ -13,10 +18,12 @@ interface BeanThereStore {
   nearbyPlaces: Cafe[];
   wantToTryIds: string[];
   cardProfile: { name: string; favSpotCafeName: string; favSpotCafeId: string; quote: string } | null;
+  userProfile: UserProfile | null;
 
   setOnboardingComplete: (val: boolean) => void;
   setDNA: (dna: CoffeeDNA) => void;
   setCardProfile: (p: { name: string; favSpotCafeName: string; favSpotCafeId: string; quote: string }) => void;
+  setUserProfile: (p: UserProfile) => void;
   addStamp: (stamp: PassportStamp) => void;
   removeStamp: (id: string) => void;
   addMemory: (memory: CoffeeMemory) => void;
@@ -50,10 +57,12 @@ export const useBeanStore = create<BeanThereStore>()(
       nearbyPlaces: [],
       wantToTryIds: [],
       cardProfile: null,
+      userProfile: null,
 
       setOnboardingComplete: (val) => set({ hasCompletedOnboarding: val }),
       setDNA: (dna) => set({ coffeeDNA: dna }),
       setCardProfile: (p) => set({ cardProfile: p }),
+      setUserProfile: (p) => set({ userProfile: p }),
       addStamp: (stamp) =>
         set((s) => ({ stamps: [...s.stamps.filter((x) => x.cafeId !== stamp.cafeId), stamp] })),
       removeStamp: (id) => set((s) => ({ stamps: s.stamps.filter((x) => x.id !== id) })),
