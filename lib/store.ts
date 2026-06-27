@@ -1,11 +1,11 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { TasteProfile, Cafe, PassportStamp, CoffeeMemory, FavoriteCollection } from "./types";
+import type { CoffeeDNA, Cafe, PassportStamp, CoffeeMemory, FavoriteCollection } from "./types";
 
 interface BeanThereStore {
   hasCompletedOnboarding: boolean;
-  tasteProfile: TasteProfile | null;
+  coffeeDNA: CoffeeDNA | null;
   stamps: PassportStamp[];
   memories: CoffeeMemory[];
   collections: FavoriteCollection[];
@@ -15,7 +15,7 @@ interface BeanThereStore {
   cardProfile: { name: string; favSpotCafeName: string; favSpotCafeId: string; quote: string } | null;
 
   setOnboardingComplete: (val: boolean) => void;
-  setTasteProfile: (profile: TasteProfile) => void;
+  setDNA: (dna: CoffeeDNA) => void;
   setCardProfile: (p: { name: string; favSpotCafeName: string; favSpotCafeId: string; quote: string }) => void;
   addStamp: (stamp: PassportStamp) => void;
   removeStamp: (id: string) => void;
@@ -31,18 +31,18 @@ interface BeanThereStore {
 }
 
 const DEFAULT_COLLECTIONS: FavoriteCollection[] = [
-  { id: "want-to-try", name: "Want to Try", emoji: "🔖", cafeIds: [] },
-  { id: "favorites", name: "Favourites", emoji: "♥", cafeIds: [] },
-  { id: "hidden-gems", name: "Hidden Gems", emoji: "💎", cafeIds: [] },
+  { id: "want-to-try",   name: "Want to Try",  emoji: "🔖", cafeIds: [] },
+  { id: "favorites",     name: "Favourites",    emoji: "♥",  cafeIds: [] },
+  { id: "hidden-gems",   name: "Hidden Gems",   emoji: "💎", cafeIds: [] },
   { id: "weekend-spots", name: "Weekend Spots", emoji: "☀️", cafeIds: [] },
-  { id: "work-cafes", name: "Work Cafés", emoji: "💻", cafeIds: [] },
+  { id: "work-cafes",    name: "Work Cafés",    emoji: "💻", cafeIds: [] },
 ];
 
 export const useBeanStore = create<BeanThereStore>()(
   persist(
     (set) => ({
       hasCompletedOnboarding: false,
-      tasteProfile: null,
+      coffeeDNA: null,
       stamps: [],
       memories: [],
       collections: DEFAULT_COLLECTIONS,
@@ -52,8 +52,8 @@ export const useBeanStore = create<BeanThereStore>()(
       cardProfile: null,
 
       setOnboardingComplete: (val) => set({ hasCompletedOnboarding: val }),
-      setTasteProfile: (profile) => set({ tasteProfile: profile }),
-      setCardProfile: (p) => set({ cardProfile: p as { name: string; favSpotCafeName: string; favSpotCafeId: string; quote: string } }),
+      setDNA: (dna) => set({ coffeeDNA: dna }),
+      setCardProfile: (p) => set({ cardProfile: p }),
       addStamp: (stamp) =>
         set((s) => ({ stamps: [...s.stamps.filter((x) => x.cafeId !== stamp.cafeId), stamp] })),
       removeStamp: (id) => set((s) => ({ stamps: s.stamps.filter((x) => x.id !== id) })),
@@ -86,7 +86,7 @@ export const useBeanStore = create<BeanThereStore>()(
       reset: () =>
         set({
           hasCompletedOnboarding: false,
-          tasteProfile: null,
+          coffeeDNA: null,
           stamps: [],
           memories: [],
           collections: DEFAULT_COLLECTIONS,
@@ -96,6 +96,6 @@ export const useBeanStore = create<BeanThereStore>()(
           cardProfile: null,
         }),
     }),
-    { name: "bean-there-store-v3" }
+    { name: "bean-there-store-v4" }
   )
 );

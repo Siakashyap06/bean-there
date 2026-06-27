@@ -100,8 +100,7 @@ function CafeRow({ cafe, index }: { cafe: Cafe; index: number }) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { tasteProfile, stamps, memories, collections, wantToTryIds, hasCompletedOnboarding } = useBeanStore();
-  const coffeeDNA = tasteProfile; // treat TasteProfile as the new DNA — only use it for null checks
+  const { coffeeDNA, stamps, memories, collections, wantToTryIds, hasCompletedOnboarding } = useBeanStore();
   const [trails, setTrails] = useState<CuratedTrail[]>([]);
   const [newToTry, setNewToTry] = useState<Cafe[]>([]);
   const [featuredCafe, setFeaturedCafe] = useState<Cafe | null>(null);
@@ -112,7 +111,7 @@ export default function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   useEffect(() => {
-    fetchCurated(tasteProfile ?? undefined).then(({ cafes, trails: t }) => {
+    fetchCurated(coffeeDNA ?? undefined).then(({ cafes, trails: t }) => {
       console.log(`[Bean There] Home — curated loaded: ${cafes.length} total`);
       setTrails(t);
       const unvisited = cafes.filter((c) => !c.visitedByMe);
@@ -127,7 +126,7 @@ export default function HomePage() {
     setNearbyLoading(true);
     getUserLocation().then((loc) => {
       if (!loc) { setNearbyLoading(false); return; }
-      fetchNearby(loc.lat, loc.lng, tasteProfile ?? undefined).then((cafes) => {
+      fetchNearby(loc.lat, loc.lng, coffeeDNA ?? undefined).then((cafes) => {
         console.log(`[Bean There] Home — Near You: ${cafes.length} cafés fetched (showing all)`);
         setNearbyCafes(cafes); // ALL nearby — no cap
         setNearbyLoading(false);
@@ -156,13 +155,13 @@ export default function HomePage() {
             <h1 className="text-display leading-tight" style={{ color: "#FAF6F1" }}>
               Bean There
             </h1>
-            {tasteProfile && (
-              <p className="text-sm mt-1" style={{ color: "var(--copper-lt)", fontStyle: "italic", fontFamily: "var(--font-playfair)" }}>
-                {tasteProfile.drink} · {tasteProfile.roast} roast
+            {coffeeDNA && (
+              <p className="text-sm mt-1" style={{ color: "var(--copper-lt)", fontStyle: "italic", fontFamily: "var(--font-instrument)" }}>
+                {coffeeDNA.drink} · {coffeeDNA.roast} roast
               </p>
             )}
           </div>
-          {tasteProfile ? (
+          {coffeeDNA ? (
             <Link href="/results">
               <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mt-1"
                 style={{ backgroundColor: "var(--copper)", color: "#fff" }}>

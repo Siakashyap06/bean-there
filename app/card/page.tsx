@@ -3,30 +3,30 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBeanStore } from "@/lib/store";
-import type { TasteProfile } from "@/lib/types";
+import type { CoffeeDNA } from "@/lib/types";
 import BottomNav from "@/components/layout/BottomNav";
 
 // ─── Label maps ──────────────────────────────────────────────────────────────
 
-const DRINK_LABEL: Record<TasteProfile["drink"], string> = {
+const DRINK_LABEL: Record<CoffeeDNA["drink"], string> = {
   latte: "Latte", cappuccino: "Cappuccino", espresso: "Espresso",
   "cold-brew": "Cold Brew", "pour-over": "Pour Over", matcha: "Matcha",
 };
-const MILK_LABEL: Record<TasteProfile["milk"], string> = {
+const MILK_LABEL: Record<CoffeeDNA["milk"], string> = {
   dairy: "Dairy", oat: "Oat Milk", almond: "Almond Milk", soy: "Soy Milk", none: "Black",
 };
-const ROAST_LABEL: Record<TasteProfile["roast"], string> = {
+const ROAST_LABEL: Record<CoffeeDNA["roast"], string> = {
   light: "Light Roast", medium: "Medium Roast", dark: "Dark Roast",
 };
-const SWEETNESS_LABEL: Record<TasteProfile["sweetness"], string> = {
+const SWEETNESS_LABEL: Record<CoffeeDNA["sweetness"], string> = {
   low: "Minimal Sugar", medium: "A Little Sweet", sweet: "Sweet",
 };
-const VIBE_LABEL: Record<TasteProfile["vibe"], string> = {
+const VIBE_LABEL: Record<CoffeeDNA["vibe"], string> = {
   study: "Study Café Dweller", work: "Work-From-Café Type", social: "Social Café Hopper",
   date: "Date Café Romantic", quick: "Quick Coffee Person",
 };
 
-function personalityTitle(t: TasteProfile): string {
+function personalityTitle(t: CoffeeDNA): string {
   if (t.drink === "matcha") return "The Matcha Minimalist";
   if (t.drink === "pour-over" && t.roast === "light") return "The Light Roast Explorer";
   if (t.drink === "espresso" && t.roast === "dark") return "The Espresso Purist";
@@ -38,7 +38,7 @@ function personalityTitle(t: TasteProfile): string {
   return "The Coffee Connoisseur";
 }
 
-function favouriteStyle(t: TasteProfile): string {
+function favouriteStyle(t: CoffeeDNA): string {
   const parts: string[] = [ROAST_LABEL[t.roast]];
   if (t.sweetness === "low") parts.push("Minimal");
   else if (t.sweetness === "sweet") parts.push("Sweet");
@@ -204,7 +204,7 @@ function SpotPicker({ stamps, selectedId, onSelect }: {
 
 export default function CardPage() {
   const router = useRouter();
-  const { tasteProfile, stamps, cardProfile, setCardProfile } = useBeanStore();
+  const { coffeeDNA: tasteProfile, stamps, cardProfile, setCardProfile } = useBeanStore();
   const cardRef = useRef<HTMLDivElement>(null);
   const [hydrated, setHydrated] = useState(false);
   const [editing, setEditing] = useState(false);

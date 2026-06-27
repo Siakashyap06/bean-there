@@ -9,7 +9,12 @@
       "Bash(curl -s http://localhost:3000)",
       "mcp__Claude_Preview__preview_start",
       "Skill(anthropic-skills:setup-cowork)",
-      "Skill(anthropic-skills:setup-cowork:*)"
+      "Skill(anthropic-skills:setup-cowork:*)",
+      "Bash(npx plugins *)",
+      "Bash(node -e \"const f = require\\('./node_modules/next/dist/compiled/@next/font/dist/google/font-data.json'\\); console.log\\(Object.keys\\(f\\).filter\\(k => k.toLowerCase\\(\\).includes\\('geist'\\) || k.toLowerCase\\(\\).includes\\('fraunces'\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const g = require\\('/Users/siakashyap/Desktop/untitled folder/node_modules/geist/dist/font.js'\\); console.log\\(JSON.stringify\\(Object.keys\\(g\\)\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git add *)"
     ]
   }
 }

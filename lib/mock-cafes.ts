@@ -26,7 +26,7 @@ export const MOCK_CAFES: Cafe[] = [
     cityArea: "Defence Colony",
     categoryTags: ["Date Spots", "South Delhi Staples", "Weekend Coffee Crawl"],
     specialtyTags: ["flat white", "pastries", "aesthetic", "date spot"],
-    visitedByMe: true,
+    visitedByMe: true, matchReasons: [],
   },
   {
     id: "mock-nunkun",
@@ -51,7 +51,7 @@ export const MOCK_CAFES: Cafe[] = [
     cityArea: "Lodhi Colony",
     categoryTags: ["South Delhi Staples", "Work Cafés", "Hidden Gems"],
     specialtyTags: ["specialty coffee", "healthy bowls", "work friendly"],
-    visitedByMe: true,
+    visitedByMe: true, matchReasons: [],
   },
   {
     id: "mock-subko",
@@ -76,6 +76,6 @@ export const MOCK_CAFES: Cafe[] = [
     cityArea: "Greater Kailash",
     categoryTags: ["Work Cafés", "South Delhi Staples", "Coffee Passport"],
     specialtyTags: ["specialty coffee", "single origin", "work friendly"],
-    visitedByMe: false,
+    visitedByMe: false, matchReasons: [],
   },
 ];

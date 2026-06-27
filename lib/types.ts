@@ -4,6 +4,7 @@ export interface QuizAnswer {
   answerText: string;
 }
 
+// Legacy simple profile — kept for match-engine backward compat
 export interface TasteProfile {
   roast: "light" | "medium" | "dark";
   drink: "latte" | "cappuccino" | "espresso" | "cold-brew" | "pour-over" | "matcha";
@@ -12,37 +13,45 @@ export interface TasteProfile {
   vibe: "study" | "work" | "social" | "date" | "quick";
 }
 
-export interface CoffeeDNA {
-  profile: ProfileType;
-  displayName: string;
-  tagline: string;
-  description: string;
-  coffeeHabits: string;
-  flavorPreferences: string;
-  idealEnvironment: string;
-  recommendedDrinks: string[];
-  compatibility: string;
-  constellation: ConstellationData;
-  accentColor: string;
+// Full attribute-based profile — superset of TasteProfile
+export interface CoffeeDNA extends TasteProfile {
+  // Flavour scores 0–10
+  matchaInterest: number;
+  specialtyInterest: number;
+  espressoConfidence: number;
+
+  // Personality 0–10
+  adventureLevel: number;
+
+  // Café preferences 0–10
+  budgetLevel: number;       // 0=budget, 10=premium
+  ambienceStyle: number;     // 0=cozy/moody, 10=minimal/modern
+  noiseTolerance: number;    // 0=silent, 10=buzzy
+  outdoorSeating: number;    // 0=don't care, 10=essential
+  chainPreference: number;   // 0=indie only, 10=chains fine
+
+  // Use-case scores 0–10
+  workFromCafe: number;
+  studyAtCafe: number;
+  dateAtCafe: number;
+
+  // Habits
+  morningPerson: number;     // 0=evening, 10=morning
+  dessertInterest: number;
+  travelWillingness: number; // 0=5 min walk, 10=anywhere
+  visitFrequency: number;    // approx visits per month
+
+  // Computed
+  constellation: ConstellationStar[];
 }
 
-export type ProfileType =
-  | "ritualist"
-  | "wanderer"
-  | "curator"
-  | "collector"
-  | "explorer"
-  | "romantic"
-  | "optimizer"
-  | "minimalist";
-
-export interface ConstellationData {
-  sweetness: number;
-  adventure: number;
-  atmosphere: number;
-  socialness: number;
-  caffeineDependency: number;
-  routine: number;
+export interface ConstellationStar {
+  id: string;
+  label: string;
+  emoji: string;
+  value: number; // 0–1 normalised
+  x: number;    // SVG canvas x
+  y: number;    // SVG canvas y
 }
 
 // Raw shape returned by Google Places API
@@ -116,7 +125,6 @@ export type CategoryTag =
   | "Visited By Me"
   | "Coffee Passport";
 
-// Processed Cafe used throughout the app
 export interface Cafe {
   id: string;
   name: string;
@@ -131,6 +139,7 @@ export interface Cafe {
   priceLevel: number;
   matchScore: number;
   matchReason: string;
+  matchReasons: string[];    // array of individual reasons
   vibe: string;
   specialties: string[];
   website?: string;
@@ -141,7 +150,6 @@ export interface Cafe {
   types: string[];
   editorialSummary?: string;
   reviews?: ProcessedReview[];
-  // Curated layer
   isCurated?: boolean;
   curatedName?: string;
   cityArea?: string;
@@ -188,11 +196,8 @@ export interface FavoriteCollection {
   name: string;
   emoji: string;
   cafeIds: string[];
-  isCollaborative?: boolean;
-  collaborators?: string[];
 }
 
-// Supabase row shape for curated_cafes table
 export interface CuratedCafeRow {
   id: number;
   created_at: string;

@@ -1,7 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import type { ConstellationData } from "@/lib/types";
+// Legacy constellation component — superseded by CoffeeConstellation.tsx
+
+interface ConstellationData {
+  sweetness?: number;
+  adventure?: number;
+  atmosphere?: number;
+  socialness?: number;
+  caffeineDependency?: number;
+  routine?: number;
+}
 
 interface Props {
   data: ConstellationData;
@@ -40,7 +49,7 @@ export default function TasteConstellation({ data, size = 240, animate = true }:
   }, [animate]);
 
   const points = AXES.map((axis, i) => {
-    const r = data[axis.key] * maxR;
+    const r = (data[axis.key] ?? 0) * maxR;
     return polarToCartesian(cx, cy, r, i, AXES.length);
   });
 

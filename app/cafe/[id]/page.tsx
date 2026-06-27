@@ -22,7 +22,7 @@ function Stars({ rating, size = 11 }: { rating: number; size?: number }) {
 
 export default function CafeDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { tasteProfile, stamps, addStamp, memories, addMemory, collections, addToCollection, removeFromCollection } = useBeanStore();
+  const { coffeeDNA: tasteProfile, stamps, addStamp, memories, addMemory, collections, addToCollection, removeFromCollection } = useBeanStore();
   const [cafe, setCafe] = useState<Cafe | null>(null);
   const [loading, setLoading] = useState(true);
   const [photoIdx, setPhotoIdx] = useState(0);

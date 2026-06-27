@@ -2,149 +2,231 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { QUIZ_QUESTIONS } from "@/lib/quiz-data";
-import { computeTasteProfile } from "@/lib/dna-engine";
 import { useBeanStore } from "@/lib/store";
+import { QUIZ_QUESTIONS, MANDATORY_COUNT } from "@/lib/quiz-data";
+import { computeCoffeeDNA } from "@/lib/dna-engine";
 import type { QuizAnswer } from "@/lib/types";
+
+const slideVariants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 48 : -48, opacity: 0 }),
+  center: { x: 0, opacity: 1, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: (dir: number) => ({ x: dir > 0 ? -48 : 48, opacity: 0, transition: { duration: 0.22, ease: "easeIn" as const } }),
+};
+
+function MidpointScreen({ onContinue, onSkip }: { onContinue: () => void; onSkip: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center min-h-screen px-7 text-center"
+      style={{ background: "linear-gradient(170deg, #F5EDE2 0%, #FAF6F1 60%, #F0E8DC 100%)" }}>
+
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+        className="text-5xl mb-6">☕</motion.div>
+
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+        className="text-overline mb-3"
+        style={{ color: "var(--copper)" }}>
+        Quick heads up
+      </motion.p>
+
+      <motion.h2
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.26 }}
+        style={{ fontFamily: "var(--font-fraunces)", color: "var(--espresso)", fontSize: "clamp(1.4rem, 5.5vw, 1.9rem)", lineHeight: 1.15, fontWeight: 600, marginBottom: "1rem" }}>
+        We already know enough to match cafés for you.
+      </motion.h2>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.36 }}
+        className="text-sm leading-relaxed mb-10"
+        style={{ color: "var(--charcoal-2)", fontFamily: "var(--font-geist)", maxWidth: "20rem" }}>
+        A few more questions build your full Coffee DNA — sharper matches, better recommendations. Takes 60 seconds.
+      </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.44 }}
+        className="w-full flex flex-col gap-3">
+        <button onClick={onContinue} className="btn-espresso w-full py-4 text-base rounded-2xl">
+          Continue — improve my matches
+        </button>
+        <button
+          onClick={onSkip}
+          className="w-full py-3.5 text-sm font-medium"
+          style={{ color: "var(--charcoal-3)" }}>
+          Skip for now
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { setTasteProfile, setOnboardingComplete } = useBeanStore();
-  const [currentQ, setCurrentQ] = useState(0);
+  const { setDNA, setOnboardingComplete } = useBeanStore();
+
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [direction, setDirection] = useState(1);
+  const [showMidpoint, setShowMidpoint] = useState(false);
 
-  const q = QUIZ_QUESTIONS[currentQ];
-  const total = QUIZ_QUESTIONS.length;
-  const progress = (currentQ / total) * 100;
-  const isLast = currentQ === total - 1;
+  const totalOptional = QUIZ_QUESTIONS.length - MANDATORY_COUNT;
+  const isMandatoryPhase = step < MANDATORY_COUNT;
+  const progress = isMandatoryPhase
+    ? ((step + 1) / MANDATORY_COUNT) * 50
+    : 50 + (((step - MANDATORY_COUNT) + 1) / totalOptional) * 50;
 
-  const finalize = useCallback((finalAnswers: QuizAnswer[]) => {
-    const profile = computeTasteProfile(finalAnswers);
-    setTasteProfile(profile);
+  const currentQ = QUIZ_QUESTIONS[step];
+
+  const finalize = useCallback((currentAnswers: QuizAnswer[]) => {
+    const dna = computeCoffeeDNA(currentAnswers);
+    setDNA(dna);
     setOnboardingComplete(true);
     router.push("/results");
-  }, [setTasteProfile, setOnboardingComplete, router]);
+  }, [setDNA, setOnboardingComplete, router]);
 
-  const handleSelect = useCallback((optionIndex: number) => {
-    setSelected(optionIndex);
-    const newAnswers = [
-      ...answers.filter((a) => a.questionIndex !== currentQ),
-      { questionIndex: currentQ, answerIndex: optionIndex, answerText: q.options[optionIndex] },
-    ];
+  const commitAnswer = useCallback(() => {
+    if (selected === null) return;
+    const newAnswer: QuizAnswer = {
+      questionIndex: step,
+      answerIndex: selected,
+      answerText: currentQ.options[selected].label,
+    };
+    const newAnswers = [...answers.filter((a) => a.questionIndex !== step), newAnswer];
     setAnswers(newAnswers);
+    setSelected(null);
+    setDirection(1);
 
-    setTimeout(() => {
-      setSelected(null);
-      if (isLast) {
-        finalize(newAnswers);
-      } else {
-        setDirection(1);
-        setCurrentQ((n) => n + 1);
-      }
-    }, 280);
-  }, [answers, currentQ, q, isLast, finalize]);
+    if (step === MANDATORY_COUNT - 1) { setShowMidpoint(true); return; }
+    if (step + 1 >= QUIZ_QUESTIONS.length) { finalize(newAnswers); return; }
+    setStep((s) => s + 1);
+  }, [selected, step, currentQ, answers, finalize]);
 
-  const prevAnswer = answers.find((a) => a.questionIndex === currentQ);
+  const handleBack = useCallback(() => {
+    if (step === 0) return;
+    setDirection(-1);
+    setSelected(answers.find((a) => a.questionIndex === step - 1)?.answerIndex ?? null);
+    setStep((s) => s - 1);
+  }, [step, answers]);
+
+  if (showMidpoint) {
+    return (
+      <MidpointScreen
+        onContinue={() => { setShowMidpoint(false); setStep(MANDATORY_COUNT); }}
+        onSkip={() => finalize(answers)}
+      />
+    );
+  }
+
+  const progressLabel = isMandatoryPhase
+    ? `${step + 1} / ${MANDATORY_COUNT}`
+    : `+${step - MANDATORY_COUNT + 1} / ${totalOptional}`;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--cream)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(170deg, #F5EDE2 0%, #FAF6F1 60%, #F0E8DC 100%)", userSelect: "none" }}>
 
       {/* Header */}
-      <div className="surface-espresso pt-14 pb-5 px-5">
-        <div className="h-0.5 rounded-full overflow-hidden mb-5"
-          style={{ backgroundColor: "rgba(250,246,241,0.12)" }}>
-          <motion.div
-            className="h-full rounded-full"
-            style={{ backgroundColor: "var(--copper)" }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          {currentQ > 0 ? (
-            <button
-              onClick={() => { setDirection(-1); setCurrentQ((n) => n - 1); setSelected(null); }}
-              className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "rgba(250,246,241,0.1)" }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="#FAF6F1" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-          ) : <div className="w-9" />}
-
-          <span className="text-sm font-semibold" style={{ color: "rgba(250,246,241,0.5)" }}>
-            {currentQ + 1}
-            <span style={{ color: "rgba(250,246,241,0.25)" }}> / {total}</span>
-          </span>
-
-          <button onClick={() => router.push("/")}
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "rgba(250,246,241,0.1)" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6l12 12" stroke="#FAF6F1" strokeWidth="2" strokeLinecap="round" />
+      <div className="px-5 pt-14 pb-4 flex items-center gap-3">
+        {step > 0 && (
+          <button
+            onClick={handleBack}
+            className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ background: "rgba(26,14,9,0.07)" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M10 3L5 8l5 5" stroke="var(--charcoal-2)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+        )}
+        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "var(--stone)" }}>
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "var(--espresso)" }}
+            initial={false}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          />
         </div>
+        <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)", minWidth: "3.2rem", textAlign: "right" }}>
+          {progressLabel}
+        </span>
       </div>
 
       {/* Question */}
-      <div className="flex-1 px-5 pt-6 pb-8">
+      <div className="flex-1 px-5 pt-5 pb-4 flex flex-col">
         <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={currentQ}
-            custom={direction}
-            initial={{ opacity: 0, x: direction * 36 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -36 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <motion.div key={step} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" className="flex flex-col flex-1">
+
             <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.05, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-              className="text-4xl block mb-4"
-            >
-              {q.emoji}
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.04, type: "spring", stiffness: 220 }}
+              className="text-4xl mb-5 block">
+              {currentQ.emoji}
             </motion.span>
 
-            <h2 className="text-editorial mb-8 leading-tight" style={{ color: "var(--charcoal)" }}>
-              {q.question}
-            </h2>
+            <h1 style={{ fontFamily: "var(--font-fraunces)", color: "var(--espresso)", fontSize: "clamp(1.7rem, 7vw, 2.4rem)", lineHeight: 1.1, fontWeight: 600, letterSpacing: "-0.025em", marginBottom: "0.5rem" }}>
+              {currentQ.question}
+            </h1>
 
-            <div className="flex flex-col gap-2.5">
-              {q.options.map((opt, i) => {
-                const isSelected = selected === i || prevAnswer?.answerIndex === i;
+            {currentQ.subtitle && (
+              <p className="text-sm mb-6" style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)" }}>
+                {currentQ.subtitle}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2.5 mt-auto">
+              {currentQ.options.map((opt, idx) => {
+                const isSelected = selected === idx;
                 return (
                   <motion.button
-                    key={i}
-                    initial={{ opacity: 0, y: 14 }}
+                    key={idx}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.055, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    onClick={() => handleSelect(i)}
-                    className="w-full text-left rounded-2xl px-5 py-4 transition-all duration-200"
+                    transition={{ delay: 0.06 + idx * 0.04, duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={() => setSelected(idx)}
                     style={{
-                      backgroundColor: isSelected ? "var(--espresso)" : "#FFFFFF",
+                      width: "100%",
+                      textAlign: "left",
+                      background: isSelected ? "var(--espresso)" : "#FFFFFF",
                       border: `1.5px solid ${isSelected ? "var(--espresso)" : "var(--stone)"}`,
-                      color: isSelected ? "var(--cream)" : "var(--charcoal)",
-                      boxShadow: isSelected ? "var(--shadow-md)" : "var(--shadow-xs)",
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[15px] font-medium leading-snug flex-1">{opt}</span>
+                      borderRadius: "1.25rem",
+                      padding: "0.9rem 1.1rem",
+                      transition: "all 0.18s cubic-bezier(0.16,1,0.3,1)",
+                      cursor: "pointer",
+                    }}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl flex-shrink-0 w-8 text-center">{opt.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: "0.9375rem", fontWeight: 600, lineHeight: 1.3, fontFamily: "var(--font-geist)", color: isSelected ? "var(--cream)" : "var(--charcoal)" }}>
+                          {opt.label}
+                        </p>
+                        {opt.desc && (
+                          <p style={{ fontSize: "0.75rem", marginTop: "0.2rem", lineHeight: 1.4, fontFamily: "var(--font-geist)", color: isSelected ? "rgba(250,246,241,0.6)" : "var(--charcoal-3)" }}>
+                            {opt.desc}
+                          </p>
+                        )}
+                      </div>
                       {isSelected && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
-                          style={{ backgroundColor: "var(--copper)" }}
-                        >
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          transition={{ type: "spring", stiffness: 300 }}
+                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: "rgba(250,246,241,0.22)" }}>
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </motion.div>
                       )}
@@ -155,6 +237,37 @@ export default function OnboardingPage() {
             </div>
           </motion.div>
         </AnimatePresence>
+      </div>
+
+      {/* CTA */}
+      <div className="px-5 pb-12 pt-2">
+        <motion.button
+          onClick={commitAnswer}
+          whileTap={{ scale: 0.97 }}
+          style={{
+            width: "100%",
+            background: "var(--espresso)",
+            color: "var(--cream)",
+            borderRadius: "1rem",
+            padding: "1rem",
+            fontWeight: 600,
+            fontSize: "0.9375rem",
+            opacity: selected !== null ? 1 : 0.3,
+            pointerEvents: selected !== null ? "auto" : "none",
+            transition: "opacity 0.2s ease",
+            fontFamily: "var(--font-geist)",
+          }}>
+          {step === QUIZ_QUESTIONS.length - 1 ? "Reveal my Coffee DNA →" : "Next →"}
+        </motion.button>
+
+        {!isMandatoryPhase && (
+          <button
+            onClick={() => finalize(answers)}
+            className="w-full text-center text-xs py-3 mt-1"
+            style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)" }}>
+            Done — skip the rest
+          </button>
+        )}
       </div>
     </div>
   );

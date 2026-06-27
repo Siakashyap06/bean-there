@@ -57,7 +57,7 @@ const SETTINGS = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { tasteProfile, stamps, memories, collections, wantToTryIds, reset } = useBeanStore();
+  const { coffeeDNA: tasteProfile, stamps, memories, collections, wantToTryIds, reset } = useBeanStore();
   const [confirmReset, setConfirmReset] = useState(false);
 
   return (

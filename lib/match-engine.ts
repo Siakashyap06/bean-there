@@ -219,6 +219,7 @@ export function googlePlaceToCafe(place: GooglePlace, taste?: TasteProfile): Caf
     types,
     editorialSummary: summary,
     reviews: processReviews(place.reviews),
+    matchReasons: tasteReasons,
   };
 }
 
@@ -287,6 +288,7 @@ export function masterRowToCafe(row: Record<string, any>, taste?: TasteProfile):
     specialtyTags,
     visitedByMe: row.visited_by_me ?? false,
     matchaAvailable: row.matcha_available ?? false,
+    matchReasons: [],
   };
 }
 
@@ -345,5 +347,6 @@ export function curatedRowToCafe(row: CuratedCafeRow, _dna?: unknown, taste?: Ta
     specialtyTags,
     visitedByMe: row.visited_by_me,
     matchaAvailable: row.matcha_available,
+    matchReasons: [],
   };
 }

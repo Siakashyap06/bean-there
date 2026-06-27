@@ -1,18 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Fraunces, Instrument_Serif } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
-const inter = Inter({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
+  variable: "--font-fraunces",
   display: "swap",
   style: ["normal", "italic"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
+  style: ["normal", "italic"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -38,9 +42,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-cream-100 min-h-screen">
-        <div className="mobile-viewport bg-cream-100">
+    <html lang="en" className={`${fraunces.variable} ${instrumentSerif.variable} ${GeistSans.variable}`}>
+      <body className="min-h-screen" style={{ background: "var(--cream)", fontFamily: "var(--font-geist)" }}>
+        <div className="mobile-viewport">
           {children}
         </div>
       </body>
