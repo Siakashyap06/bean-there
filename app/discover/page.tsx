@@ -89,36 +89,99 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   );
 }
 
-function CityPicker({ onSelect }: { onSelect: (city: string) => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  function pick(city: string) {
-    setSelected(city);
-    onSelect(city);
-  }
-  return (
-    <div className="mx-5 rounded-2xl p-5" style={{ background: "var(--cream-deep)" }}>
-      <p className="text-xs font-semibold mb-1" style={{ color: "var(--charcoal-2)", fontFamily: "var(--font-geist)" }}>
-        Which city are you in?
-      </p>
-      <p className="text-xs mb-4" style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)" }}>
-        We'll show cafés near you without needing GPS.
-      </p>
-      <div className="flex gap-2">
-        {Object.entries(CITY_PRESETS).map(([key, val]) => (
-          <button
-            key={key}
-            onClick={() => pick(key)}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-            style={{
-              background: selected === key ? "var(--espresso)" : "#fff",
-              color: selected === key ? "var(--cream)" : "var(--charcoal)",
-              border: "1.5px solid var(--stone)",
-              fontFamily: "var(--font-geist)",
-            }}>
-            {val.label}
-          </button>
-        ))}
+function LocationBar({
+  status,
+  selectedCity,
+  onSelectCity,
+  onRetry,
+}: {
+  status: "idle" | "detecting" | "granted" | "denied";
+  selectedCity: string | null;
+  onSelectCity: (city: string) => void;
+  onRetry: () => void;
+}) {
+  const [expanded, setExpanded] = useState(status === "denied");
+
+  // Auto-expand when denied so user sees picker immediately
+  useEffect(() => {
+    if (status === "denied") setExpanded(true);
+  }, [status]);
+
+  if (status === "detecting") {
+    return (
+      <div className="mx-5 mb-5 px-4 py-3 rounded-2xl flex items-center gap-3"
+        style={{ background: "var(--cream-deep)" }}>
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--copper)" }} />
+        <p className="text-xs" style={{ color: "var(--charcoal-3)" }}>Detecting your location…</p>
       </div>
+    );
+  }
+
+  if (status === "granted") {
+    return (
+      <div className="mx-5 mb-5 px-4 py-3 rounded-2xl flex items-center gap-2"
+        style={{ background: "var(--cream-deep)" }}>
+        <span className="text-sm">📍</span>
+        <p className="flex-1 text-xs font-medium" style={{ color: "var(--charcoal-2)" }}>Using your GPS location</p>
+        <button onClick={() => setExpanded((v) => !v)}
+          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: "var(--espresso)", color: "#FAF6F1" }}>
+          {expanded ? "Close" : "Change city"}
+        </button>
+      </div>
+    );
+  }
+
+  // denied or idle
+  return (
+    <div className="mx-5 mb-5 rounded-2xl overflow-hidden" style={{ background: "var(--cream-deep)" }}>
+      {/* Header row */}
+      <div className="px-4 py-3 flex items-center gap-2">
+        <span className="text-sm">📍</span>
+        <p className="flex-1 text-xs font-medium" style={{ color: "var(--charcoal-2)" }}>
+          {selectedCity ? `Showing cafés in ${CITY_PRESETS[selectedCity].label}` : "Location access off"}
+        </p>
+        <button onClick={onRetry}
+          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: "rgba(44,24,16,0.08)", color: "var(--espresso)" }}>
+          Use GPS
+        </button>
+        <button onClick={() => setExpanded((v) => !v)}
+          className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ background: "rgba(44,24,16,0.08)" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+            style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+            <path d="M6 9l6 6 6-6" stroke="var(--charcoal-2)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      {/* City buttons — shown when expanded */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: "hidden" }}>
+            <div className="px-4 pb-4 flex gap-2">
+              {Object.entries(CITY_PRESETS).map(([key, val]) => (
+                <button key={key}
+                  onClick={() => { onSelectCity(key); setExpanded(false); }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: selectedCity === key ? "var(--espresso)" : "#fff",
+                    color: selectedCity === key ? "#FAF6F1" : "var(--charcoal)",
+                    border: "1.5px solid var(--stone)",
+                  }}>
+                  {val.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -128,6 +191,7 @@ export default function DiscoverPage() {
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "detecting" | "granted" | "denied">("idle");
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   const [featured, setFeatured]           = useState<Cafe[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
@@ -167,7 +231,10 @@ export default function DiscoverPage() {
 
   const pickCity = useCallback((city: string) => {
     const preset = CITY_PRESETS[city];
-    if (preset) setLocation({ lat: preset.lat, lng: preset.lng });
+    if (preset) {
+      setSelectedCity(city);
+      setLocation({ lat: preset.lat, lng: preset.lng });
+    }
   }, []);
 
   // Curated / featured
@@ -303,6 +370,15 @@ export default function DiscoverPage() {
 
       <SearchBar onSearch={handleSearch} />
 
+      {!showSearch && (
+        <LocationBar
+          status={locationStatus}
+          selectedCity={selectedCity}
+          onSelectCity={pickCity}
+          onRetry={retryLocation}
+        />
+      )}
+
       {/* Search results */}
       <AnimatePresence>
         {showSearch && (
@@ -372,45 +448,16 @@ export default function DiscoverPage() {
           )}
 
           {/* Near You */}
-          <div className="mb-6">
-            <div className="px-5 flex items-center justify-between mb-3">
-              <div>
+          {(location || locationStatus === "granted") && (
+            <div className="mb-6">
+              <div className="px-5 mb-3">
                 <h2 style={{ fontFamily: "var(--font-fraunces)", fontSize: "1.125rem", fontWeight: 700, color: "var(--charcoal)" }}>
                   📍 Near You
                 </h2>
-                {locationStatus === "detecting" && (
-                  <p className="text-[11px] mt-0.5" style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)" }}>
-                    Detecting your location…
-                  </p>
-                )}
-                {locationStatus === "denied" && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[11px]" style={{ color: "var(--charcoal-3)", fontFamily: "var(--font-geist)" }}>
-                      Location access off
-                    </p>
-                    <button onClick={retryLocation}
-                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: "var(--copper)", color: "#fff", fontFamily: "var(--font-geist)" }}>
-                      Allow →
-                    </button>
-                  </div>
-                )}
               </div>
-            </div>
-
-            {locationStatus === "denied" && nearYou.length === 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-                <CityPicker onSelect={pickCity} />
-              </motion.div>
-            )}
-
-            {locationStatus !== "denied" && (
               <CafeRow cafes={nearYou} loading={nearLoading || (locationStatus === "detecting" && nearYou.length === 0)} />
-            )}
-            {locationStatus === "denied" && nearYou.length > 0 && (
-              <CafeRow cafes={nearYou} loading={false} />
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Dynamic sections */}
           {sections.map((sec, idx) => (
